@@ -20,7 +20,7 @@ class SpecialPriceForApartment
             ? $apartment->detail->price_weekend
             : $apartment->detail->price;
 
-            foreach($specialPricePeriods as $specialPrice)
+        foreach($specialPricePeriods as $specialPrice)
         {
             $period = CarbonPeriod::create($specialPrice->start, Carbon::parse($specialPrice->end)->subDay());
 

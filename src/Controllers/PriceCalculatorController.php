@@ -4,15 +4,13 @@ namespace Bookaweb\PricingCalculator\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Ads\Types\Apartment;
-use App\Calendar\Controllers\CalendarController;
 use Carbon\CarbonPeriod;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Bookaweb\PricingCalculator\Requests\CalculatePriceRequest;
-use App\Calendar\RulePeriod;
-use App\Commissions\Commission;
-use App\Promocode\Promocode;
+use Bookaweb\PricingCalculator\CommissionResolveServiceFeeForApartment;
 use Bookaweb\PricingCalculator\SpecialPriceForApartment;
+use Bookaweb\PricingCalculator\RulePeriodHelper;
 use Illuminate\Http\Request;
 
 class PriceCalculatorController extends Controller
@@ -193,7 +191,9 @@ class PriceCalculatorController extends Controller
         $this->overwriteParamsFromRequest($request);
 
         $this->specialPricing = SpecialPriceForApartment::get($apartment);
-        $this->rulesByDate = RulePeriod::getRulesAppliedOnApartmentForPeriodByDay($apartment->id, $request->start, $request->end);
+
+        $this->rulesByDate = RulePeriodHelper::getRulesAppliedOnApartmentForPeriodByDay($apartment->id, $request->start, $request->end);
+        // $this->rulesByDate = RulePeriod::getRulesAppliedOnApartmentForPeriodByDay($apartment->id, $request->start, $request->end);
         $this->dates =  new Collection();
         // PREPARE END
     }
@@ -257,7 +257,7 @@ class PriceCalculatorController extends Controller
 
         $taxable = $taxableWithoutDiscount - $this->discount;
 
-        $commission = Commission::resolveServiceFeeForApartment($apartment);
+        $commission = CommissionResolveServiceFeeForApartment::get($apartment);
         // $commission = \Illuminate\Support\Facades\Cache::remember('commission_for_apartment_' . $apartment->id, 5 * 60, function () use ($apartment) {
         //     return Commission::resolveServiceFeeForApartment($apartment);
         // });
@@ -298,9 +298,9 @@ class PriceCalculatorController extends Controller
 
         if($request->has('promocode'))
         {
-            $promocode = Promocode::whereCode($request->get('promocode'))->first();
+            $promocode = \DB::table('promocodes')->where('code', $request->get('promocode'))->first();
 
-            if($promocode && $promocode->expire_at > \Carbon\Carbon::now()){
+            if($promocode && \Carbon\Carbon::parse($promocode->expire_at) > \Carbon\Carbon::now()){
 
                 $this->total_before_promocode = $this->total;
                 $this->promocode_discount = $this->total * ($promocode->discount / 100);
@@ -398,7 +398,7 @@ class PriceCalculatorController extends Controller
             'total' => 'required|numeric|min:3|max:999999',
         ]);
 
-        $commission = Commission::resolveServiceFeeForApartment($apartment);
+        $commission = CommissionResolveServiceFeeForApartment::get($apartment);
 
         return self::calculateCustomPriceBasedOnTotalAndFee(
             $data['total'],
