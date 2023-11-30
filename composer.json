@@ -1,0 +1,12 @@
+{
+    "version": "1.0",
+    "name": "bookaweb/pricing-calculator",
+    "description": "Opis vašeg paketa za kalkulaciju cena",
+    "type": "library",
+    "autoload": {
+        "psr-4": {
+            "Bookaweb\\PricingCalculator\\": "src/"
+        }
+    },
+    "require": {}
+}
