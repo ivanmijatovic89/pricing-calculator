@@ -3,7 +3,6 @@
 namespace Bookaweb\PricingCalculator\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Ads\Types\Apartment;
 use Carbon\CarbonPeriod;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -148,8 +147,10 @@ class PriceCalculatorController extends Controller
         }
     }
 
-    public function computedCalculatePrice(Apartment $apartment, CalculatePriceRequest $request)
+    public function computedCalculatePrice($apartmentId, CalculatePriceRequest $request)
     {
+        $apartment = $this->findApartment($apartmentId);
+
         $this->init($apartment, $request);
 
         $data = [];
@@ -179,7 +180,7 @@ class PriceCalculatorController extends Controller
     }
 
 
-    public function init(Apartment $apartment, CalculatePriceRequest $request)
+    public function init($apartment, CalculatePriceRequest $request)
     {
         // PREPARE START
         $this->start = Carbon::parse($request->start);
@@ -193,14 +194,33 @@ class PriceCalculatorController extends Controller
         $this->specialPricing = SpecialPriceForApartment::get($apartment);
 
         $this->rulesByDate = RulePeriodHelper::getRulesAppliedOnApartmentForPeriodByDay($apartment->id, $request->start, $request->end);
-        // $this->rulesByDate = RulePeriod::getRulesAppliedOnApartmentForPeriodByDay($apartment->id, $request->start, $request->end);
+
         $this->dates =  new Collection();
         // PREPARE END
     }
 
-
-    public function calculatePrice(Apartment $apartment, CalculatePriceRequest $request)
+    private function findApartment($apartmentId)
     {
+        $apartment = \DB::table('ads')->where('id', $apartmentId)->first();
+        $detail = \DB::table('ad_decorator_apartment_details')->where('ad_id', $apartmentId)->first();
+
+        if ($detail) {
+            // Ručno konvertovanje polja 'parking' u array, ako je postavljeno
+            if (isset($detail->parking) && is_string($detail->parking)) {
+                $detail->parking = json_decode($detail->parking, true);
+            }
+
+            // Dodajte slične konverzije za ostala polja ako je potrebno
+        }
+
+        $apartment->detail = $detail;
+
+        return $apartment;
+    }
+
+    public function calculatePrice($apartmentId, CalculatePriceRequest $request)
+    {
+        $apartment = $this->findApartment($apartmentId);
         $this->init($apartment, $request);
 
         return $this->calculate($apartment, $request);
@@ -393,7 +413,11 @@ class PriceCalculatorController extends Controller
         return $base / (1 - $fee * (1 + $tax));
     }
 
-    public function calculateCustomPrice(Apartment $apartment, Request $request) {
+    public function calculateCustomPrice($apartmentId, Request $request)
+    {
+
+        $apartment = $this->findApartment($apartmentId);
+
         $data = $request->validate([
             'total' => 'required|numeric|min:3|max:999999',
         ]);

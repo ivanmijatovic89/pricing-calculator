@@ -12,11 +12,7 @@ class RulePeriodHelper
 
     public static function getRulesAppliedOnApartmentForPeriodByDay($apartmentId, $start, $end)
     {
-        // $periods = \DB::table('calendar_rule_periods')::scopeApplyOverlapQuery($start, $end, $apartmentId)
-
         $periods = self::applyOverlapQueryWithQueryBuilder('calendar_rule_periods', $start, $end, $apartmentId)
-            // ->join('calendar_rules', 'calendar_rule_periods.calendar_rule_id', '=', 'calendar_rules.id')
-            // ->addSelect('calendar_rules.*')
             ->get();
 
         $rules = DB::table('calendar_rules')
@@ -24,21 +20,11 @@ class RulePeriodHelper
             ->get();
 
         foreach ($periods as $period) {
-            // $rule = $rules->firstWhere('id',$period->calendar_rule_id);
-
-
-            $period->rule = $rules->firstWhere('id',$period->calendar_rule_id);
-            // if(isset($rules[$period->calendar_rule_id])) {
-            // }else{
-            //     dd('ovaj nema rule', $period, DB::table('calendar_rules')->where('id', 1)->first());
-            //     $period->rules = collect();
-            // }
-            // $period->rules = $rules[$period->calendar_rule_id] ?? collect();
+            $rule = $rules->firstWhere('id',$period->calendar_rule_id);;
+            $period->rule = $rule
+                ? $rule
+                : collect();
         }
-        // dd($periods, $rules);
-        // $periods = self::applyOverlapQuery($start, $end, $apartmentId)
-        //     ->with('rule')
-        //     ->get();
 
         return self::parseRulePeriodsByDay($periods);
     }
