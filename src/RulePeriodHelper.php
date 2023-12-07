@@ -4,7 +4,7 @@ namespace Bookaweb\PricingCalculator;
 use Carbon\CarbonPeriod;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
-use App\Calendar\CalendarTrait;
+use Bookaweb\PricingCalculator\CalendarTrait;
 
 class RulePeriodHelper
 {
