@@ -39,7 +39,7 @@ class ComputedPriceCalculatorForApartment extends Command
 
         ApartmentComputedPricing::where('ad_id', $this->apartment->id)->delete();
 
-        for ($i=0; $i < ApartmentComputedPricing::DAYS_IN_ADVANCE_TO_CALCULATE ; $i++) { // day
+        for ($i=0; $i < PriceCalculatorController::DAYS_IN_ADVANCE_TO_CALCULATE ; $i++) { // day
 
             $results = $this->getPrice(
                 $start->format('Y-m-d'),

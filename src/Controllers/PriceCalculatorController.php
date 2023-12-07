@@ -47,6 +47,7 @@ class PriceCalculatorController extends Controller
     public $rulesByDate;
 
     const MONTH_LENGTH = 29;
+    const DAYS_IN_ADVANCE_TO_CALCULATE = 730;
 
     public function singleDayPrice($date)
     {
