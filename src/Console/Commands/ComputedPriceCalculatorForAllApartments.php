@@ -2,9 +2,9 @@
 
 namespace Bookaweb\PricingCalculator\Console\Commands;
 
-use App\Ads\Types\Apartment;
 use Illuminate\Console\Command;
-use App\Ads\Category;
+// use App\Ads\Types\Apartment;
+// use App\Ads\Category;
 
 class ComputedPriceCalculatorForAllApartments extends Command
 {
@@ -17,16 +17,20 @@ class ComputedPriceCalculatorForAllApartments extends Command
     {
         $timerStart = microtime(true);
         $this->total = 0;
-        $categoryApartment = Category::whereConst(Apartment::CATEGORY)->first();
+        // $categoryApartment = Category::whereConst('apartment')->first();
+        $categoryApartment = \DB::table('ad_categories')
+                               ->where('const', 'apartment')
+                               ->first();
 
         // chunk all apartments
-        Apartment::
-            where(function($query) {
+        \DB::table('ads')
+            ->where('category_id', $categoryApartment->id)
+            ->where(function($query) {
                 $query->where('active->sr', 1)
                     ->orWhere('active->en', 1);
             })
             ->where('status', 'listed')
-            ->where('category_id', $categoryApartment->id)
+            ->orderBy('id')
             ->chunk(200, function ($apartments)
             {
                 foreach ($apartments as $i => $apartment) {

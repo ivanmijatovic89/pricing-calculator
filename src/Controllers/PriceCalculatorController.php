@@ -200,7 +200,7 @@ class PriceCalculatorController extends Controller
         // PREPARE END
     }
 
-    private function findApartment($apartmentId)
+    public function findApartment($apartmentId)
     {
         $apartment = \DB::table('ads')->where('id', $apartmentId)->first();
         $detail = \DB::table('ad_decorator_apartment_details')->where('ad_id', $apartmentId)->first();
@@ -212,9 +212,9 @@ class PriceCalculatorController extends Controller
             }
 
             // Dodajte slične konverzije za ostala polja ako je potrebno
-        }
 
-        $apartment->detail = $detail;
+            $apartment->detail = $detail;
+        }
 
         return $apartment;
     }

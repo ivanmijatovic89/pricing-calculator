@@ -2,13 +2,15 @@
 
 namespace Bookaweb\PricingCalculator\Console\Commands;
 
-use App\Ads\Types\Apartment;
 use Illuminate\Console\Command;
 use Bookaweb\PricingCalculator\Controllers\PriceCalculatorController;
 use Illuminate\Http\Request;
-use App\Ads\ApartmentComputedPricing;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Bookaweb\PricingCalculator\Requests\CalculatePriceRequest;
+
+// use App\Ads\Types\Apartment;
+// use App\Ads\ApartmentComputedPricing;
+
 
 class ComputedPriceCalculatorForApartment extends Command
 {
@@ -20,12 +22,17 @@ class ComputedPriceCalculatorForApartment extends Command
     public function handle()
     {
         $timerStart = microtime(true);
-
-        try {
-            $this->apartment = Apartment::findOrFail($this->argument('apartmentId'));
-        } catch (ModelNotFoundException $exception) {
+        $priceCalculatorController = new PriceCalculatorController();
+        $this->apartment = $priceCalculatorController->findApartment($this->argument('apartmentId'));
+        if (!$this->apartment) {
             throw new ModelNotFoundException('Apartment do not exists ID ' . $this->argument('apartmentId'));
         }
+
+        // try {
+        //     $this->apartment = Apartment::findOrFail($this->argument('apartmentId'));
+        // } catch (ModelNotFoundException $exception) {
+        //     throw new ModelNotFoundException('Apartment do not exists ID ' . $this->argument('apartmentId'));
+        // }
         $start = \Carbon\Carbon::now();
 
         // Initialize the array to store records that will be bulk inserted
@@ -37,7 +44,8 @@ class ComputedPriceCalculatorForApartment extends Command
             'monthly_discount' => [],
         ];
 
-        ApartmentComputedPricing::where('ad_id', $this->apartment->id)->delete();
+        // ApartmentComputedPricing::where('ad_id', $this->apartment->id)->delete();
+        \DB::table('apartment_computed_pricing')->where('ad_id', $this->apartment->id)->delete();
 
         for ($i=0; $i < PriceCalculatorController::DAYS_IN_ADVANCE_TO_CALCULATE ; $i++) { // day
 
@@ -82,7 +90,8 @@ class ComputedPriceCalculatorForApartment extends Command
 
         \DB::transaction(function () use ($chunks) {
             foreach ($chunks as $chunk) {
-                ApartmentComputedPricing::insert($chunk);
+                // ApartmentComputedPricing::insert($chunk);
+                \DB::table('apartment_computed_pricing')->insert($chunk);
             }
         });
 
