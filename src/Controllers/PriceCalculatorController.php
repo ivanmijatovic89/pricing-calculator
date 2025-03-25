@@ -3,6 +3,7 @@
 namespace Bookaweb\PricingCalculator\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\User\Payout;
 use Carbon\CarbonPeriod;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -127,6 +128,34 @@ class PriceCalculatorController extends Controller
         }
 
         return $price;
+    }
+
+    public function getMinStayForCheckin($date)
+    {
+        // RULE
+        if(isset($this->rulesByDate[$date]) && isset($this->rulesByDate[$date]['min_stay'])){
+
+            return $this->rulesByDate[$date]['min_stay'];
+        }
+
+        $daysOfWeek = [
+            $this->pricing->min_stay_sunday,
+            $this->pricing->min_stay_monday,
+            $this->pricing->min_stay_tuesday,
+            $this->pricing->min_stay_wednesday,
+            $this->pricing->min_stay_thursday,
+            $this->pricing->min_stay_friday,
+            $this->pricing->min_stay_saturday,
+        ];
+
+        $minStayDayOfWeek = $daysOfWeek[\Carbon\Carbon::parse($date)->dayOfWeek];
+
+        if(isset($minStayDayOfWeek)){
+            return $minStayDayOfWeek;
+        }
+
+        // default
+        return $this->pricing->min_stay;
     }
 
     public function overwriteParamsFromRequest($request)
@@ -343,12 +372,17 @@ class PriceCalculatorController extends Controller
         }
 
         // Minimum stay check // ToDo
+        $minStayCheckin = $this->getMinStayForCheckin($this->start->clone()->format('Y-m-d'));
 
         return [
             'promocode'=> $request->has('promocode')
                 ? $request->get('promocode')
                 : null,
             'start' => $this->start->format('Y-m-d'),
+            'start_min_stay' => $minStayCheckin,
+            'has_enoung_for_min_stay' => count($this->dates) >= $minStayCheckin
+                ? true
+                : false,
             'end' => $this->end->format('Y-m-d'),
             'guests'=> $this->guests,
             'parking'=> $this->parking,
@@ -374,6 +408,8 @@ class PriceCalculatorController extends Controller
             'promocode_discount_percentage' => round($this->promocode_discount_percentage,2),
             'promocode_discount' => round($this->promocode_discount,2),
             'total_before_promocode' => round($this->total_before_promocode,2),
+
+            'advance_payment' => $this->calculateAdvancePayment($apartment->owner_id),
 
             'pricing'=> [
                 "charge_after_guest" => $this->pricing->charge_after_guest,
@@ -447,6 +483,46 @@ class PriceCalculatorController extends Controller
             'serviceFee' => round($serviceFee, 2),
             'taxOnServiceFee' => round($tax, 2),
             'ownerTotal' => round($ownerTotal, 2),
+        ];
+    }
+
+
+    private function calculateAdvancePayment($ownerId)
+    {
+
+        $payouts = Payout::where('user_id', $ownerId)->count();
+        $daysUntilCheckin = now()->clone()->startOfDay()->diffInDays($this->start->clone()->startOfDay());
+
+        // check if owner have payouts, or it's at least 4 days until checkin
+        $required = $payouts && $daysUntilCheckin > 4;
+        $percentage = 0;
+        $dueDate = null;
+        $nights = count($this->dates);
+
+        if ($required) {
+            if ($nights == 1) {
+                $percentage = 100;
+            } elseif ($nights == 2) {
+                $percentage = 50;
+            } else {
+                $percentage = 30;
+            }
+
+            $dueDate = now()->hour < 15
+                ? now()->addDays(1)->setTime(17, 0)->toDateTimeString()
+                : now()->addDays(2)->setTime(11, 0)->toDateTimeString();
+        }
+
+        $amount = $required ? round($this->total * ($percentage / 100), 2) : null;
+
+        return [
+            'required' => $required,
+            'percentage' => $percentage,
+            'amount' => $amount,
+            'remaining_amount' => $required
+                ? round($this->total - $amount, 2)
+                : null,
+            'due_date' => $dueDate,
         ];
     }
 }
