@@ -3,7 +3,6 @@
 namespace Bookaweb\PricingCalculator\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\User\Payout;
 use Carbon\CarbonPeriod;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -489,8 +488,7 @@ class PriceCalculatorController extends Controller
 
     private function calculateAdvancePayment($ownerId)
     {
-
-        $payouts = Payout::where('user_id', $ownerId)->count();
+        $payouts = \DB::table('user_payouts')->where('user_id', $ownerId)->count();
         $daysUntilCheckin = now()->clone()->startOfDay()->diffInDays($this->start->clone()->startOfDay());
 
         // check if owner have payouts, or it's at least 4 days until checkin
