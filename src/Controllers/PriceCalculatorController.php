@@ -2,6 +2,7 @@
 
 namespace Bookaweb\PricingCalculator\Controllers;
 
+use App\Helpers\Php82Rounding;
 use App\Http\Controllers\Controller;
 use Carbon\CarbonPeriod;
 use Carbon\Carbon;
@@ -119,7 +120,7 @@ class PriceCalculatorController extends Controller
         if($priceAdjustment){
             // apply price adjustment
             if ($priceAdjustment < 0 || $priceAdjustment > 0) { // decrease
-                $price = round(
+                $price = Php82Rounding::round(
                     ( $price * ((100 + $priceAdjustment)/100) )
                     , 2
                 );
@@ -389,24 +390,24 @@ class PriceCalculatorController extends Controller
             'weeklyDiscount' => $this->weeklyDiscount,
             'monthlyDiscount' => $this->monthlyDiscount,
 
-            'baseAvg' => round($this->baseAvg, 2),
-            'baseTotal' => round($this->baseTotal, 2),
-            'extraGuestFee' => round($this->extraGuestFee, 2),
-            'discount'=> round($this->discount, 2),
+            'baseAvg' => Php82Rounding::round($this->baseAvg, 2),
+            'baseTotal' => Php82Rounding::round($this->baseTotal, 2),
+            'extraGuestFee' => Php82Rounding::round($this->extraGuestFee, 2),
+            'discount'=> Php82Rounding::round($this->discount, 2),
             'sericeFeePercentage' => $this->sericeFeePercentage,
             'taxPercentage'       => $this->taxPercentage,
-            'total'=> round($this->total, 2),
-            'ownerTotal'=> round($this->ownerTotal, 2),
-            'parkingTotal'=> round($this->parkingTotal, 2),
-            'serviceFee'=> round($this->serviceFee, 2),
-            'taxOnServiceFee'=> round($this->taxOnServiceFee, 2),
-            'serviceFeeTotal'=> round($this->serviceFeeTotal, 2),
-            'avgPerNight'=> round(
+            'total'=> Php82Rounding::round($this->total, 2),
+            'ownerTotal'=> Php82Rounding::round($this->ownerTotal, 2),
+            'parkingTotal'=> Php82Rounding::round($this->parkingTotal, 2),
+            'serviceFee'=> Php82Rounding::round($this->serviceFee, 2),
+            'taxOnServiceFee'=> Php82Rounding::round($this->taxOnServiceFee, 2),
+            'serviceFeeTotal'=> Php82Rounding::round($this->serviceFeeTotal, 2),
+            'avgPerNight'=> Php82Rounding::round(
                 $this->total / count($this->dates)
             , 2),
-            'promocode_discount_percentage' => round($this->promocode_discount_percentage,2),
-            'promocode_discount' => round($this->promocode_discount,2),
-            'total_before_promocode' => round($this->total_before_promocode,2),
+            'promocode_discount_percentage' => Php82Rounding::round($this->promocode_discount_percentage ?? 0, 2),
+            'promocode_discount' => Php82Rounding::round($this->promocode_discount ?? 0, 2),
+            'total_before_promocode' => Php82Rounding::round($this->total_before_promocode,2),
 
             'advance_payment' => $this->calculateAdvancePayment($apartment->owner_id),
 
@@ -478,10 +479,10 @@ class PriceCalculatorController extends Controller
         $ownerTotal = $total - $serviceFee - $tax;
 
         return [
-            'total' => round($total, 2),
-            'serviceFee' => round($serviceFee, 2),
-            'taxOnServiceFee' => round($tax, 2),
-            'ownerTotal' => round($ownerTotal, 2),
+            'total' => Php82Rounding::round($total, 2),
+            'serviceFee' => Php82Rounding::round($serviceFee, 2),
+            'taxOnServiceFee' => Php82Rounding::round($tax, 2),
+            'ownerTotal' => Php82Rounding::round($ownerTotal, 2),
         ];
     }
 
@@ -489,7 +490,8 @@ class PriceCalculatorController extends Controller
     private function calculateAdvancePayment($ownerId)
     {
         $payouts = \DB::table('user_payouts')->where('user_id', $ownerId)->count();
-        $daysUntilCheckin = now()->clone()->startOfDay()->diffInDays($this->start->clone()->startOfDay());
+        // Carbon 2's result: whole days, never negative (Carbon 3 returns a signed float).
+        $daysUntilCheckin = (int) abs(now()->clone()->startOfDay()->diffInDays($this->start->clone()->startOfDay()));
 
         // check if owner have payouts, or it's at least 4 days until checkin
         $required = $payouts && $daysUntilCheckin > 4;
@@ -511,14 +513,14 @@ class PriceCalculatorController extends Controller
                 : now()->addDays(2)->setTime(11, 0)->toDateTimeString();
         }
 
-        $amount = $required ? round($this->total * ($percentage / 100), 2) : null;
+        $amount = $required ? Php82Rounding::round($this->total * ($percentage / 100), 2) : null;
 
         return [
             'required' => $required,
             'percentage' => $percentage,
             'amount' => $amount,
             'remaining_amount' => $required
-                ? round($this->total - $amount, 2)
+                ? Php82Rounding::round($this->total - $amount, 2)
                 : null,
             'due_date' => $dueDate,
         ];
